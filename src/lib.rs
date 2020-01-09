@@ -1062,7 +1062,7 @@ fn create_vm_test() {
 #[test]
 fn set_memory_test() {
     let mut anon_mmap = MmapOptions::new().len(16 * (1 << 12)).map_anon().unwrap();
-    let slice = unsafe { anon_mmap.as_mut_slice() };
+    let slice = anon_mmap.deref_mut();
     let h = System::initialize().unwrap();
     let mut vm = VirtualMachine::create(&h).unwrap();
     vm.set_user_memory_region(0, slice, 0).unwrap();
