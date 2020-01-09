@@ -5,13 +5,12 @@ extern crate kvm;
 extern crate memmap;
 
 use kvm::{Capability, Exit, IoDirection, System, Vcpu, VirtualMachine};
-use memmap::{Mmap, Protection};
+use memmap::MmapOptions;
 
 fn main() {
     // Allocate 2MB for the guest memory
-    let mut anon_mmap = Mmap::anonymous(2 * (1 << 20), Protection::ReadWrite)
-                            .unwrap();
-    let slice = unsafe { anon_mmap.as_mut_slice() };
+    let mut anon_mmap = MmapOptions::new().len(2 * (1 << 20)).map_anon().unwrap();
+    let slice = &mut anon_mmap;
 
     // Write the "inb 0x01" instruction at 1MB
     slice[0x100000] = 0xe4;

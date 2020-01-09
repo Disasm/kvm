@@ -45,7 +45,7 @@ use std::mem;
 use std::ops::DerefMut;
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
-use memmap::{Mmap, Protection};
+use memmap::{MmapMut, MmapOptions};
 
 const API_VERSION: i32 = 12;
 
@@ -165,7 +165,7 @@ struct UserspaceMemoryRegion {
 pub struct Vcpu<'a> {
     fd: File,
     vm: &'a VirtualMachine<'a>,
-    mmap: Mmap,
+    mmap: MmapMut,
 }
 
 impl<'a> fmt::Debug for Vcpu<'a> {
@@ -967,10 +967,7 @@ impl<'a> Vcpu<'a> {
         };
         vm.num_vcpus += 1;
         let mmap_size = vm.sys.get_vcpu_mmap_size();
-        let m = try!(Mmap::open_with_offset(&fd,
-                                            Protection::ReadWrite,
-                                            0,
-                                            mmap_size));
+        let m = unsafe { MmapOptions::new().len(mmap_size).map_mut(&fd)? };
         Ok(Vcpu {
             fd: fd,
             vm: vm,
@@ -982,7 +979,7 @@ impl<'a> Vcpu<'a> {
     pub unsafe fn run(&mut self) -> Result<Run> {
         let ret = kvm_run(self.fd.as_raw_fd());
         if ret == 0 {
-            Ok(*(self.mmap.mut_ptr() as *mut Run))
+            Ok(*(self.mmap.as_mut_ptr() as *mut Run))
         } else {
             Err(Error::last_os_error())
         }
@@ -1068,8 +1065,7 @@ fn create_vm_test() {
 
 #[test]
 fn set_memory_test() {
-    let mut anon_mmap = Mmap::anonymous(16 * (1 << 12), Protection::ReadWrite)
-                            .unwrap();
+    let mut anon_mmap = MmapOptions::new().len(16 * (1 << 12)).map_anon().unwrap();
     let slice = unsafe { anon_mmap.as_mut_slice() };
     let h = System::initialize().unwrap();
     let mut vm = VirtualMachine::create(&h).unwrap();
