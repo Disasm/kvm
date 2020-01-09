@@ -810,10 +810,10 @@ impl ::std::default::Default for Union_Unnamed26 {
 impl System {
     /// Initialize the KVM system
     pub fn initialize() -> Result<Self> {
-        let f = try!(OpenOptions::new()
+        let f = OpenOptions::new()
                          .read(true)
                          .write(true)
-                         .open("/dev/kvm"));
+                         .open("/dev/kvm")?;
         let vers = unsafe { kvm_get_api_version(f.as_raw_fd()) };
         if vers == API_VERSION {
             Ok(System { fd: f })
